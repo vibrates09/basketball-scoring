@@ -7,23 +7,30 @@
 
 CRGB leds[NUM_LEDS];  // Define an array of CRGB LEDs
 
+// TODO:: Add multiple strip support for faster processing
+// #define NUM_STRIPS 2
+// #define NUM_LEDS_PER_STRIP 96
+// int NUM_LEDS_PER_STRIP = 96
+// CRGB leds[NUM_STRIPS][NUM_LEDS_PER_STRIP];
+
 int HOME_SCORE = 0;
 int AWAY_SCORE = 0;
-int HOME_SEGMENTS[] = {0,1,2};
-int AWAY_SEGMENTS[] = {3,4,5};
 
 // input pins
-// const byte pin7 = 7;
-// const int pin6 = 6;
-// const int pin5 = 5;
-// const int pi64 = 4;
-// const int INPUT_BUTTON_PIN = 4;
+const int pin5 = 5;
+const int pin6 = 6;
+const int pin8 = 8;
+const int pin9 = 9;
 
+// Flag to track if LEDs need updating
+bool ledsChanged = false; 
 
 // Bounce objects to read debounced button input
-// Bounce2::Button btnStart = Bounce2::Button();
 Bounce2::Button homeIncrementButton = Bounce2::Button();
 Bounce2::Button homeDecrementButton = Bounce2::Button();
+
+Bounce2::Button awayIncrementButton = Bounce2::Button();
+Bounce2::Button awayDecrementButton = Bounce2::Button();
 
 int charLayout[11][42] = {
     {
@@ -140,108 +147,81 @@ void drawChar(int number, int offsetY) {
     for (int i = 0; i <= 11; i++) {
       if(twoSegment[number][i] == 1) {
         leds[i + offset[offsetY]] = CRGB::Red;
-        FastLED.show();
       }else {
         leds[i + offset[offsetY]] = CRGB::Black;
-        FastLED.show();
       }
     }
   } else {
     for (int i = 0; i <= 41; i++) {
       if(charLayout[number][i] == 1) {
         leds[i + offset[offsetY]] = CRGB::Red;
-        FastLED.show();
       }else {
         leds[i + offset[offsetY]] = CRGB::Black;
-        FastLED.show();
       }
     }
   }
+  // FastLED.show();
 }
-
-int buttonState = 0;
 
 void setup() {
   FastLED.addLeds<LED_TYPE, DATA_PIN, GRB>(leds, NUM_LEDS);  // Initialize FastLED with the LED configuration
-  // Serial.begin(9600);
-  // Serial.begin(115200);
 
-  // Serial.println("STARTTTED");
-  pinMode(5, INPUT);
-  pinMode(6, INPUT);
-  pinMode(8, INPUT);
-  pinMode(9, INPUT);
-  // digitalWrite(pin6, LOW);
+  // TODO:: Add multiple strip support for faster processing
+  // FastLED.addLeds<LED_TYPE, DATA_PIN2>(leds[0], NUM_LEDS_PER_STRIP);
+  // FastLED.addLeds<LED_TYPE, LED_PIM3>(leds[1], NUM_LEDS_PER_STRIP);
 
+  homeDecrementButton.attach(pin5, INPUT);
+  homeIncrementButton.attach(pin6, INPUT);
 
-  // homeIncrementButton.attach(pi64, INPUT_PULLUP);
-  // homeDecrementButton.attach(pin5, INPUT_PULLUP);
-  delay(4000);
+  awayDecrementButton.attach(pin8, INPUT);
+  awayIncrementButton.attach(pin9, INPUT);
+
+  homeDecrementButton.interval(5);
+  homeIncrementButton.interval(5);
+
+  awayDecrementButton.interval(5);
+  awayIncrementButton.interval(5);
+
+  delay(3000);
   setHomeScore(0);
   setAwayScore(0);
 }
 
-int pressed=0;
 void loop() {
-  // Serial.println(HOME_SCORE);
-  // if (homeDecrementButton.pressed()) {
-    // HOME_SCORE = HOME_SCORE - 1;
-    // setHomeScore(HOME_SCORE);
-  // }
+  homeDecrementButton.update();
+  homeIncrementButton.update();
 
-  // if (homeIncrementButton.pressed()) {
-    // HOME_SCORE = HOME_SCORE + 1;
-    // Serial.println(HOME_SCORE);
-    // setHomeScore(HOME_SCORE);
-  // }
+  awayDecrementButton.update();
+  awayIncrementButton.update();
 
-  // int buttonVal = digitalRead(pin6); // returns 0 (LOW) or 1 (HIGH)
-
-  // // Serial.println(buttonVal);
-
-  // // if (buttonVal == 1) {
-  // // HOME_SCORE = HOME_SCORE + 1;
-  // // Serial.println(HOME_SCORE);
-  // // setHomeScore(HOME_SCORE);
-  // // }
-
-  if (digitalRead(6) == 1) {
-    if(pressed == 0) {
-      setHomeScore(HOME_SCORE++);
-      pressed = 1;
-    }
-  } else {
-    pressed = 0;
+  if (homeDecrementButton.fell()) {
+    HOME_SCORE--;
+    setHomeScore(HOME_SCORE);
+    ledsChanged = true;
   }
 
-  if (digitalRead(5) == 1) {
-    if(pressed == 0) {
-      setHomeScore(HOME_SCORE--);
-      pressed = 1;
-    }
-  } else {
-    pressed = 0;
+  if (homeIncrementButton.fell()) {
+    HOME_SCORE++;
+    setHomeScore(HOME_SCORE);
+    ledsChanged = true;
   }
 
-  if (digitalRead(9) == 1) {
-    if(pressed == 0) {
-      setAwayScore(AWAY_SCORE++);
-      pressed = 1;
-    }
-  } else {
-    pressed = 0;
+  if (awayDecrementButton.fell()) {
+    AWAY_SCORE--;
+    setAwayScore(AWAY_SCORE);
+    ledsChanged = true;
   }
 
-  if (digitalRead(8) == 1) {
-    if(pressed == 0) {
-      setAwayScore(AWAY_SCORE--);
-      pressed = 1;
-    }
-  } else {
-    pressed = 0;
+  if (awayIncrementButton.fell()) {
+    AWAY_SCORE++;
+    setAwayScore(AWAY_SCORE);
+    ledsChanged = true;
   }
 
-  //delay(500);
+  if (ledsChanged) {
+    FastLED.show();
+    ledsChanged = false; // Reset the flag after updating LEDs
+  }
 }
 
 void setHomeScore(int homeScore) {
